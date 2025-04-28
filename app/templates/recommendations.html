@@ -1,0 +1,740 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .location-status { 
+    padding: 8px 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    background-color: #e3f2fd;
+    display: flex;
+    align-items: center;
+  }
+  .location-status.error {
+    background-color: #ffebee;
+    color: #c62828;
+  }
+  .location-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rating-value {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #ff9800;
+  }
+  .btn-location {
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-location:hover {
+    background-color: #356ac3;
+  }
+  .btn-location.active {
+    background-color: #d32f2f;
+  }
+  .btn-location.active:hover {
+    background-color: #b71c1c;
+  }
+  .nearby-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  /* Modal styles */
+  .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+  }
+  .modal-content {
+    background-color: white;
+    margin: 10% auto;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .close:hover {
+    color: black;
+  }
+  .browser-instructions {
+    margin: 20px 0;
+  }
+  .coord-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .coord-inputs input {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  #useManualCoords {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  #useManualCoords:hover {
+    background-color: #388E3C;
+  }
+  /* Styles for flash messages */
+  .flash-message {
+    position: relative;
+    z-index: 1000;
+    margin-bottom: 15px;
+    padding: 12px 20px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Animation keyframes */
+  @keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; transform: translateY(-10px); }
+  }
+  
+  /* Fancy location button styles */
+  .location-section {
+    margin: 20px 0;
+    padding: 15px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  }
+  
+  .location-title {
+    font-weight: 600;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    color: #2c3e50;
+  }
+  
+  .location-title i {
+    background: #4d94ff;
+    color: white;
+    padding: 8px;
+    border-radius: 50%;
+    margin-right: 10px;
+    box-shadow: 0 3px 10px rgba(77, 148, 255, 0.3);
+  }
+  
+  .location-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+  }
+  
+  .fancy-location-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #42b0ff 0%, #4d94ff 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(77, 148, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .fancy-location-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 20px rgba(77, 148, 255, 0.4);
+  }
+  
+  .fancy-location-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 10px rgba(77, 148, 255, 0.3);
+  }
+  
+  .fancy-location-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: 0.5s;
+  }
+  
+  .fancy-location-btn:hover::before {
+    left: 100%;
+  }
+  
+  .fancy-location-btn.active {
+    background: linear-gradient(135deg, #ff5252 0%, #e33e3e 100%);
+    box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);
+  }
+  
+  .fancy-location-btn.active:hover {
+    box-shadow: 0 7px 20px rgba(255, 82, 82, 0.4);
+  }
+  
+  .fancy-location-btn i {
+    font-size: 1.2em;
+  }
+  
+  .radius-select {
+    background: white;
+    border: 2px solid #e4e8ec;
+    padding: 10px 15px;
+    border-radius: 50px;
+    font-weight: 500;
+    color: #2c3e50;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+  }
+  
+  .radius-select:hover {
+    border-color: #4d94ff;
+    box-shadow: 0 2px 10px rgba(77, 148, 255, 0.2);
+  }
+  
+  /* Pulse animation for the active state */
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.5);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(255, 82, 82, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+    }
+  }
+  
+  .fancy-location-btn.active {
+    animation: pulse 2s infinite;
+  }
+</style>
+
+<div class="container">
+  <div class="recommendations-header">
+    <h2><i class="fas fa-utensils fa-lg"></i> Restaurant Recommendations</h2>
+    <p class="subtitle">Discover your next favorite place to dine</p>
+  </div>
+
+  <!-- ======= FILTERS SECTION ======= -->
+  <div class="filters-section">
+    <form method="GET" action="{{ url_for('main.recommend') }}" class="animated-form" id="searchForm">
+      <div class="filter-grid">
+        <div class="filter-group" style="--i: 1;">
+          <label for="city"><i class="fas fa-map-marker-alt fa-lg"></i> City</label>
+          <div class="input-wrapper">
+            <i class="fas fa-search input-icon"></i>
+            <input type="text" id="city" name="city" placeholder="e.g., Mumbai" list="city-list" value="{{ request.args.get('city', '') }}">
+            <datalist id="city-list">
+              {% if popular_cities %}
+                {% for city in popular_cities %}
+                  <option value="{{ city }}">
+                {% endfor %}
+              {% else %}
+                <option value="Mumbai">
+                <option value="Delhi">
+                <option value="Bangalore">
+                <option value="Hyderabad">
+                <option value="Jaipur">
+                <option value="Chennai">
+                <option value="Kolkata">
+                <option value="Pune">
+              {% endif %}
+            </datalist>
+          </div>
+        </div>
+        <div class="filter-group" style="--i: 2;">
+          <label for="cuisine"><i class="fas fa-utensils fa-lg"></i> Cuisine</label>
+          <div class="input-wrapper">
+            <i class="fas fa-search input-icon"></i>
+            <input type="text" id="cuisine" name="cuisine" placeholder="e.g., Italian" list="cuisine-list" value="{{ request.args.get('cuisine', '') }}">
+            <datalist id="cuisine-list">
+              {% if popular_cuisines %}
+                {% for cuisine in popular_cuisines %}
+                  <option value="{{ cuisine }}">
+                {% endfor %}
+              {% else %}
+                <option value="North Indian">
+                <option value="South Indian">
+                <option value="Chinese">
+                <option value="Italian">
+                <option value="Continental">
+              {% endif %}
+            </datalist>
+          </div>
+        </div>
+        <div class="filter-group" style="--i: 3;">
+          <label for="min_rating"><i class="fas fa-star fa-lg"></i> Min Rating</label>
+          <div class="range-slider-container">
+            <input type="range" id="min_rating" name="min_rating" min="0" max="5" step="0.5" value="{{ request.args.get('min_rating', '0') }}" class="range-slider">
+            <span class="range-value" id="min_rating_value">{{ request.args.get('min_rating', '0') }}</span>
+            <div class="range-labels">
+              <span>0</span>
+              <span>5</span>
+            </div>
+          </div>
+        </div>
+        <div class="filter-group" style="--i: 4;">
+          <label for="max_cost"><i class="fas fa-rupee-sign fa-lg"></i> Max Price</label>
+          <div class="range-slider-container">
+            <input type="range" id="max_cost" name="max_cost" min="0" max="3000" step="100" value="{{ request.args.get('max_cost', '3000') }}" class="range-slider">
+            <span class="range-value" id="max_cost_value">₹{{ request.args.get('max_cost', '3000') }}</span>
+            <div class="price-labels">
+              <span>Budget</span>
+              <span>Premium</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Location search fields -->
+        <input type="hidden" id="latitude" name="latitude" value="{{ request.args.get('latitude', '') }}">
+        <input type="hidden" id="longitude" name="longitude" value="{{ request.args.get('longitude', '') }}">
+        <input type="hidden" id="radius" name="radius" value="{{ request.args.get('radius', '5') }}">
+        
+        <div class="location-section">
+          <h4 class="location-title">
+            <i class="fas fa-compass"></i> Find Restaurants Near You
+          </h4>
+          <div class="location-controls">
+            <button type="button" id="useLocationBtn" class="fancy-location-btn">
+              <i class="fas fa-location-arrow"></i> 
+              <span>Use My Location</span>
+            </button>
+            <select id="radiusSelect" class="radius-select" onchange="document.getElementById('radius').value = this.value">
+              <option value="1" {% if request.args.get('radius') == '1' %}selected{% endif %}>Within 1 km</option>
+              <option value="3" {% if request.args.get('radius') == '3' %}selected{% endif %}>Within 3 km</option>
+              <option value="5" {% if request.args.get('radius') == '5' or not request.args.get('radius') %}selected{% endif %}>Within 5 km</option>
+              <option value="10" {% if request.args.get('radius') == '10' %}selected{% endif %}>Within 10 km</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <div id="locationStatus" class="location-status" {% if not request.args.get('latitude') %}style="display: none;"{% endif %}>
+        <div class="location-indicator">
+          <i class="fas fa-map-marker-alt"></i> 
+          <span id="locationStatusText">Using your current location</span>
+        </div>
+      </div>
+      
+      <button type="submit" class="search-btn"><i class="fas fa-search fa-lg"></i> Update Results</button>
+    </form>
+  </div>
+
+  <!-- ======= RESULTS SECTION ======= -->
+  <div id="list-view">
+    {% if restaurants %}
+      <div class="results-count">
+        <p><i class="fas fa-clipboard-list fa-lg"></i> <span class="highlight">{{ restaurants|length }}</span> restaurants found matching your criteria</p>
+        {% if request.args.get('latitude') and request.args.get('longitude') %}
+          <p class="nearby-info"><i class="fas fa-location-arrow"></i> Showing restaurants within {{ request.args.get('radius', '5') }} km</p>
+        {% endif %}
+      </div>
+      <div class="restaurant-grid">
+        {% for r in restaurants %}
+          <div class="restaurant-card" style="--i: {{ loop.index }};"
+            data-id="{{ r.id }}"
+            data-name="{{ r.name }}"
+            data-rating="{{ r.rating }}"
+            data-locality="{{ r.locality }}"
+            data-city="{{ r.city }}"
+            data-cuisines="{{ r.cuisine }}"
+            {% if r.latitude %}data-lat="{{ r.latitude }}"{% endif %}
+            {% if r.longitude %}data-lng="{{ r.longitude }}"{% endif %}>
+            <div class="restaurant-card-header">
+              <h3>{{ r.name }}</h3>
+              <div class="restaurant-rating">
+                <span class="rating-value">{{ r.rating }}</span>
+                <div class="rating-stars">
+                  {% for i in range(1, 6) %}
+                    {% if i <= r.rating|int %}
+                      <i class="fas fa-star"></i>
+                    {% elif i - 0.5 <= r.rating %}
+                      <i class="fas fa-star-half-alt"></i>
+                    {% else %}
+                      <i class="far fa-star"></i>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+                <span class="votes">({{ r.votes if r.votes else 0 }})</span>
+              </div>
+            </div>
+            <div class="restaurant-details">
+              <p class="restaurant-cuisines">
+                <i class="fas fa-utensils fa-lg"></i> {{ r.cuisine }}
+              </p>
+              <p class="restaurant-location">
+                <i class="fas fa-map-marker-alt fa-lg"></i> {{ r.locality }}, {{ r.city }}
+              </p>
+              <p class="restaurant-cost">
+                <i class="fas fa-rupee-sign fa-lg"></i> {{ r.cost }} for two • {{ r.price_range() }}
+              </p>
+              {% if r.distance is defined %}
+                <p class="restaurant-distance">
+                  <i class="fas fa-route fa-lg"></i> {{ "%.1f"|format(r.distance) }} km away
+                </p>
+              {% endif %}
+            </div>
+            <div class="card-actions">
+              <button class="btn-action save-btn" data-restaurant-id="{{ r.id }}">
+                <i class="far fa-bookmark fa-lg"></i> Save
+              </button>
+              <button class="btn-action directions-btn" 
+                data-name="{{ r.name }}"
+                data-locality="{{ r.locality }}" 
+                data-city="{{ r.city }}">
+                <i class="fas fa-directions fa-lg"></i> Directions
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="no-results">
+        <div class="no-results-icon">
+          <i class="fas fa-search fa-2x"></i>
+        </div>
+        <h3>No restaurants found matching your criteria</h3>
+        <p>Try adjusting your filters or <a href="{{ url_for('main.dashboard') }}" class="text-link">search again</a>.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- ======= SUGGESTION BOX ======= -->
+  {% if not restaurants %}
+    <div class="suggestion-box">
+      <div class="suggestion-content">
+        <h3><i class="fas fa-lightbulb fa-lg"></i> Don't see your favorite restaurant?</h3>
+        <p>Help us grow our database by suggesting restaurants you love!</p>
+        <a href="{{ url_for('main.suggest') }}" class="btn btn-primary">
+          <i class="fas fa-plus-circle fa-lg"></i> Suggest a Restaurant
+        </a>
+      </div>
+    </div>
+  {% endif %}
+  
+  <!-- Location Help Modal -->
+  <div id="locationHelpModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3>Enable Location Access</h3>
+      <p>Your browser is blocking location access. Please follow these steps:</p>
+      
+      <div class="browser-instructions">
+        <h4>Chrome:</h4>
+        <ol>
+          <li>Click the lock/info icon in the address bar</li>
+          <li>Select "Site settings"</li>
+          <li>Change Location permission to "Allow"</li>
+          <li>Refresh the page</li>
+        </ol>
+        
+        <h4>Firefox:</h4>
+        <ol>
+          <li>Click the lock/info icon in the address bar</li>
+          <li>Clear the "Block" setting for Location</li>
+          <li>Refresh the page</li>
+        </ol>
+        
+        <h4>Safari:</h4>
+        <ol>
+          <li>Open Safari Preferences</li>
+          <li>Go to "Websites" > "Location"</li>
+          <li>Allow location for this website</li>
+          <li>Refresh the page</li>
+        </ol>
+      </div>
+      
+      <div class="manual-coords">
+        <h4>Enter coordinates manually:</h4>
+        <div class="coord-inputs">
+          <input type="text" id="manualLat" placeholder="Latitude (e.g., 19.0760)" />
+          <input type="text" id="manualLng" placeholder="Longitude (e.g., 72.8777)" />
+          <button id="useManualCoords">Use These Coordinates</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Range slider updates for visual feedback
+  document.addEventListener('DOMContentLoaded', function() {
+    // Min rating slider
+    const minRatingSlider = document.getElementById('min_rating');
+    const minRatingValue = document.getElementById('min_rating_value');
+    if (minRatingSlider && minRatingValue) {
+      minRatingSlider.addEventListener('input', function() {
+        minRatingValue.textContent = this.value;
+      });
+    }
+    
+    // Max cost slider
+    const maxCostSlider = document.getElementById('max_cost');
+    const maxCostValue = document.getElementById('max_cost_value');
+    if (maxCostSlider && maxCostValue) {
+      maxCostSlider.addEventListener('input', function() {
+        maxCostValue.textContent = '₹' + this.value;
+      });
+    }
+  });
+</script>
+
+<!-- Location management script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const useLocationBtn = document.getElementById('useLocationBtn');
+    const locationStatus = document.getElementById('locationStatus');
+    const latitudeInput = document.getElementById('latitude');
+    const longitudeInput = document.getElementById('longitude');
+    const locationStatusText = document.getElementById('locationStatusText');
+    const searchForm = document.getElementById('searchForm');
+    const locationHelpModal = document.getElementById('locationHelpModal');
+    const modalCloseBtn = document.querySelector('#locationHelpModal .close');
+    const useManualCoordsBtn = document.getElementById('useManualCoords');
+    
+    // Close modal button
+    if (modalCloseBtn) {
+      modalCloseBtn.addEventListener('click', function() {
+        locationHelpModal.style.display = 'none';
+      });
+    }
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+      if (event.target === locationHelpModal) {
+        locationHelpModal.style.display = 'none';
+      }
+    });
+    
+    // Use manual coordinates button
+    if (useManualCoordsBtn) {
+      useManualCoordsBtn.addEventListener('click', function() {
+        const manualLat = document.getElementById('manualLat').value.trim();
+        const manualLng = document.getElementById('manualLng').value.trim();
+        
+        if (manualLat && manualLng && !isNaN(manualLat) && !isNaN(manualLng)) {
+          latitudeInput.value = manualLat;
+          longitudeInput.value = manualLng;
+          locationHelpModal.style.display = 'none';
+          locationStatusText.textContent = 'Using manually entered location';
+          locationStatus.style.display = 'block';
+          useLocationBtn.innerHTML = '<i class="fas fa-times"></i> Clear Location';
+          useLocationBtn.classList.add('active');
+          searchForm.submit();
+        } else {
+          alert('Please enter valid latitude and longitude values.');
+        }
+      });
+    }
+    
+    // Check if location is already being used
+    if (latitudeInput.value && longitudeInput.value) {
+      locationStatus.style.display = 'block';
+      useLocationBtn.innerHTML = '<i class="fas fa-times"></i> Clear Location';
+      useLocationBtn.classList.add('active');
+    }
+    
+    // Function to auto-dismiss status messages
+    function showStatusMessage(message, isError = false) {
+      const locationStatus = document.getElementById('locationStatus');
+      const locationStatusText = document.getElementById('locationStatusText');
+      
+      // Set message text
+      locationStatusText.textContent = message;
+      
+      // Show status
+      locationStatus.style.display = 'block';
+      
+      // Add error class if needed
+      if (isError) {
+        locationStatus.classList.add('error');
+      } else {
+        locationStatus.classList.remove('error');
+      }
+      
+      // Auto-dismiss after 5 seconds
+      setTimeout(function() {
+        // Only hide if it's still the same message
+        if (locationStatusText.textContent === message) {
+          locationStatus.style.display = 'none';
+          
+          // Reset error class
+          if (isError) {
+            locationStatus.classList.remove('error');
+          }
+        }
+      }, 5000); // 5 seconds
+    }
+    
+    // Update the error handling in the location button click
+    useLocationBtn.addEventListener('click', function() {
+      if (useLocationBtn.classList.contains('active')) {
+        // Clear location
+        latitudeInput.value = '';
+        longitudeInput.value = '';
+        locationStatus.style.display = 'none';
+        useLocationBtn.innerHTML = '<i class="fas fa-location-arrow"></i> Use My Location';
+        useLocationBtn.classList.remove('active');
+        searchForm.submit();
+      } else {
+        // Get location
+        if (navigator.geolocation) {
+          showStatusMessage('Getting your location...');
+          
+          navigator.geolocation.getCurrentPosition(
+            function(position) {
+              latitudeInput.value = position.coords.latitude;
+              longitudeInput.value = position.coords.longitude;
+              showStatusMessage('Using your current location');
+              useLocationBtn.innerHTML = '<i class="fas fa-times"></i> Clear Location';
+              useLocationBtn.classList.add('active');
+              searchForm.submit();
+            },
+            function(error) {
+              // Show help modal on permission denial
+              if (error.code === error.PERMISSION_DENIED) {
+                locationHelpModal.style.display = 'block';
+              }
+              
+              let errorMsg = 'Failed to get your location';
+              if (error.code === error.PERMISSION_DENIED) {
+                errorMsg += ': Permission denied';
+              } else if (error.code === error.TIMEOUT) {
+                errorMsg += ': Timeout';
+              }
+              
+              showStatusMessage(errorMsg, true);
+            },
+            {
+              timeout: 10000,
+              enableHighAccuracy: true,
+              maximumAge: 0
+            }
+          );
+        } else {
+          showStatusMessage('Geolocation is not supported by your browser', true);
+        }
+      }
+    });
+  });
+</script>
+
+<script>
+  // Handle directions button clicks
+  document.addEventListener('DOMContentLoaded', function() {
+    const directionsButtons = document.querySelectorAll('.directions-btn');
+    
+    directionsButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const card = this.closest('.restaurant-card');
+        const name = card.dataset.name || '';
+        const locality = card.dataset.locality || '';
+        const city = card.dataset.city || '';
+        
+        // Check if user's location is available
+        const userLat = document.getElementById('latitude').value;
+        const userLng = document.getElementById('longitude').value;
+        
+        // Try to construct a Google Maps URL with directions
+        let mapsUrl;
+        
+        if (userLat && userLng) {
+          // Use current user location as starting point
+          mapsUrl = `https://www.google.com/maps/dir/${userLat},${userLng}/`;
+          
+          // If restaurant has coordinates in data attributes, use them
+          if (card.dataset.lat && card.dataset.lng) {
+            mapsUrl += `${card.dataset.lat},${card.dataset.lng}`;
+          } else {
+            // Otherwise use name and address
+            mapsUrl += encodeURIComponent(`${name} ${locality} ${city}`);
+          }
+        } else {
+          // Just search for the restaurant
+          mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(name + ' ' + locality + ' ' + city)}`;
+        }
+        
+        window.open(mapsUrl, '_blank');
+      });
+    });
+  });
+</script>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} flash-message">
+                <i class="fas fa-info-circle"></i>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<script>
+    // Auto-dismiss flash messages after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        const flashMessages = document.querySelectorAll('.flash-message');
+        flashMessages.forEach(function(message) {
+            // Add a slide-in animation
+            message.style.animation = 'slideIn 0.5s forwards';
+            
+            // Set a timeout to remove the message
+            setTimeout(function() {
+                // Add a fade-out animation
+                message.style.animation = 'fadeOut 0.5s forwards';
+                
+                // Remove the element after animation completes
+                setTimeout(function() {
+                    if (message.parentNode) {
+                        message.parentNode.removeChild(message);
+                    }
+                }, 500); // Match animation duration
+            }, 5000); // 5 seconds
+        });
+    });
+</script>
+{% endblock %}

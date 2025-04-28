@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <i class="fas fa-shield-alt auth-icon"></i>
+            <h2>Verify Your Email</h2>
+            <p class="auth-subtitle">Enter the verification code sent to your email</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'info' %}fa-info-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('main.verify_otp') }}" class="auth-form">
+            <div class="form-group" style="--i: 1;">
+                <label for="otp">
+                    <i class="fas fa-key"></i>
+                    Verification Code
+                </label>
+                <input type="text" id="otp" name="otp" class="form-control" placeholder="Enter 6-digit code" required maxlength="6" pattern="[0-9]{6}">
+                <div class="form-hint">Please check your email inbox for the verification code</div>
+            </div>
+            
+            <div class="form-group" style="--i: 2;">
+                <button type="submit" class="auth-button">Verify Account</button>
+            </div>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Didn't receive the code? <a href="{{ url_for('main.register') }}" class="auth-link">Register again</a></p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-hint {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 0.5rem;
+    }
+    
+    #otp {
+        font-size: 1.5rem;
+        letter-spacing: 0.5rem;
+        text-align: center;
+    }
+</style>
+{% endblock %} 

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="user-welcome">
+            <i class="fas fa-user-circle user-icon"></i>
+            <h2>Welcome, {{ current_user.username }}!</h2>
+            <p class="subtitle">Find your next culinary adventure</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <i class="fas {% if category == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- ======= DASHBOARD CARDS ======= -->
+    <div class="dashboard-overview">
+        <a href="{{ url_for('main.recommend') }}" class="dashboard-card-link">
+            <div class="dashboard-card" style="--card-color: var(--primary);">
+                <div class="card-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Restaurant Search</h3>
+                    <p>Find restaurants based on your preferences</p>
+                </div>
+            </div>
+        </a>
+        <a href="{{ url_for('main.saved_restaurants') }}" class="dashboard-card-link">
+            <div class="dashboard-card" style="--card-color: var(--secondary);">
+                <div class="card-icon">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Your Favorites</h3>
+                    <p>Restaurants you've saved</p>
+                </div>
+            </div>
+        </a>
+        <a href="{{ url_for('main.recommend') }}" class="dashboard-card-link">
+            <div class="dashboard-card" style="--card-color: var(--accent);">
+                <div class="card-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div class="card-content">
+                    <h3>Recommendations</h3>
+                    <p>Personalized for your taste</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- ======= SEARCH SECTION ======= -->
+    <div class="search-section">
+        <h3><i class="fas fa-search"></i> Find Restaurants</h3>
+        <form method="GET" action="{{ url_for('main.recommend') }}" class="animated-form">
+            <div class="filter-grid">
+                <!-- City Filter -->
+                <div class="filter-group" style="--i: 1;">
+                    <label for="city"><i class="fas fa-map-marker-alt"></i> City</label>
+                    <input type="text" id="city" name="city" placeholder="e.g., Mumbai">
+                </div>
+
+                <!-- Cuisine Filter -->
+                <div class="filter-group" style="--i: 2;">
+                    <label for="cuisine"><i class="fas fa-utensils"></i> Cuisine</label>
+                    <select id="cuisine" name="cuisine">
+                        <option value="">All Cuisines</option>
+                        <option value="Indian">Indian</option>
+                        <option value="Italian">Italian</option>
+                        <option value="Chinese">Chinese</option>
+                        <option value="Mexican">Mexican</option>
+                        <option value="Thai">Thai</option>
+                        <option value="Japanese">Japanese</option>
+                        <option value="Mediterranean">Mediterranean</option>
+                    </select>
+                </div>
+
+                <!-- Rating Filter -->
+                <div class="filter-group" style="--i: 3;">
+                    <label for="min_rating"><i class="fas fa-star"></i> Min Rating</label>
+                    <input type="number" id="min_rating" name="min_rating" min="1" max="5" step="0.1" placeholder="1-5">
+                </div>
+
+                <!-- Price Filter -->
+                <div class="filter-group" style="--i: 4;">
+                    <label for="max_price"><i class="fas fa-rupee-sign"></i> Max Price (₹)</label>
+                    <input type="number" id="max_price" name="max_cost" placeholder="e.g., 1000">
+                </div>
+            </div>
+            <button type="submit" class="search-btn"><i class="fas fa-search"></i> Find Restaurants</button>
+        </form>
+    </div>
+
+    <!-- ======= RECENT SEARCHES SECTION ======= -->
+    <div class="recent-searches">
+        <h3><i class="fas fa-history"></i> Recent Searches</h3>
+        <div class="recent-searches-grid">
+            <div class="recent-search-card">
+                <div class="recent-search-icon"><i class="fas fa-pizza-slice"></i></div>
+                <div class="recent-search-details">
+                    <h4>Italian Restaurants</h4>
+                    <p>Mumbai, Rating: 4+</p>
+                </div>
+                <a href="#" class="recent-search-btn"><i class="fas fa-arrow-right"></i></a>
+            </div>
+            <div class="recent-search-card">
+                <div class="recent-search-icon"><i class="fas fa-drumstick-bite"></i></div>
+                <div class="recent-search-details">
+                    <h4>Chinese Cuisine</h4>
+                    <p>Delhi, Rating: 3.5+</p>
+                </div>
+                <a href="#" class="recent-search-btn"><i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======= QUESTIONNAIRE SECTION ======= -->
+    <div class="questionnaire-section">
+        <h3><i class="fas fa-sliders-h"></i> Personalize Your Recommendations</h3>
+        <form method="POST" action="{{ url_for('main.save_preferences') }}" class="animated-form">
+            <!-- Cuisine Preferences -->
+            <div class="form-group" style="--i: 1;">
+                <label><i class="fas fa-utensils"></i> Favorite Cuisines (Select up to 3):</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="cuisine" value="Indian"> Indian</label>
+                    <label><input type="checkbox" name="cuisine" value="Italian"> Italian</label>
+                    <label><input type="checkbox" name="cuisine" value="Chinese"> Chinese</label>
+                    <label><input type="checkbox" name="cuisine" value="Mexican"> Mexican</label>
+                    <label><input type="checkbox" name="cuisine" value="Thai"> Thai</label>
+                    <label><input type="checkbox" name="cuisine" value="Japanese"> Japanese</label>
+                </div>
+            </div>
+
+            <!-- Budget Preference -->
+            <div class="form-group" style="--i: 2;">
+                <label><i class="fas fa-wallet"></i> Budget Range:</label>
+                <select name="budget" class="form-control">
+                    <option value="$">Budget (₹0-500)</option>
+                    <option value="$$">Moderate (₹500-1500)</option>
+                    <option value="$$$">Premium (₹1500+)</option>
+                </select>
+            </div>
+
+            <!-- Dietary Preferences -->
+            <div class="form-group" style="--i: 3;">
+                <label><i class="fas fa-leaf"></i> Dietary Preferences:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="dietary" value="vegetarian"> Vegetarian</label>
+                    <label><input type="checkbox" name="dietary" value="vegan"> Vegan</label>
+                    <label><input type="checkbox" name="dietary" value="gluten-free"> Gluten-Free</label>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Preferences</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

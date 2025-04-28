@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <div class="recommendations-header">
+    <h2><i class="fas fa-bookmark fa-lg"></i> Your Saved Restaurants</h2>
+    <p class="subtitle">Restaurants you've bookmarked for later</p>
+  </div>
+
+  {% if restaurants %}
+    <div class="restaurant-grid">
+      {% for r in restaurants %}
+        <div class="restaurant-card" style="--i: {{ loop.index }};">
+          <div class="restaurant-card-header">
+            <h3>{{ r.name }}</h3>
+            <div class="restaurant-rating">
+              <span class="rating-value">{{ r.rating }}</span>
+              <div class="rating-stars">
+                {% for i in range(1, 6) %}
+                  {% if i <= r.rating|int %}
+                    <i class="fas fa-star"></i>
+                  {% elif i - 0.5 <= r.rating %}
+                    <i class="fas fa-star-half-alt"></i>
+                  {% else %}
+                    <i class="far fa-star"></i>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <span class="votes">({{ r.votes }})</span>
+            </div>
+          </div>
+          <div class="restaurant-details">
+            <p class="restaurant-cuisines">
+              <i class="fas fa-utensils fa-lg"></i> {{ r.cuisine }}
+            </p>
+            <p class="restaurant-location">
+              <i class="fas fa-map-marker-alt fa-lg"></i> {{ r.locality }}, {{ r.city }}
+            </p>
+            <p class="restaurant-cost">
+              <i class="fas fa-rupee-sign fa-lg"></i> {{ r.cost }} for two • {{ r.price_range() }}
+            </p>
+          </div>
+          <div class="card-actions">
+            <button class="btn-action save-btn saved" data-restaurant-id="{{ r.id }}">
+              <i class="fas fa-bookmark fa-lg"></i> Saved
+            </button>
+            <button class="btn-action directions-btn" 
+              data-name="{{ r.name }}"
+              data-locality="{{ r.locality }}" 
+              data-city="{{ r.city }}">
+              <i class="fas fa-directions fa-lg"></i> Directions
+            </button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="no-results">
+      <div class="no-results-icon">
+        <i class="fas fa-bookmark fa-2x"></i>
+      </div>
+      <h3>You haven't saved any restaurants yet</h3>
+      <p>Explore restaurants and click the "Save" button to bookmark your favorites.</p>
+      <a href="{{ url_for('main.recommend') }}" class="btn btn-primary">
+        <i class="fas fa-search"></i> Find Restaurants
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  // Handle directions button clicks
+  document.addEventListener('DOMContentLoaded', function() {
+    const directionsButtons = document.querySelectorAll('.directions-btn');
+    
+    directionsButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const name = this.dataset.name || '';
+        const locality = this.dataset.locality || '';
+        const city = this.dataset.city || '';
+        
+        // Open Google search for restaurant location
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(name + ' ' + locality + ' ' + city)}`, '_blank');
+      });
+    });
+    
+    // Handle save/unsave
+    const saveButtons = document.querySelectorAll('.save-btn');
+    
+    saveButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const restaurantId = this.dataset.restaurantId;
+        const restaurantName = this.closest('.restaurant-card').querySelector('h3').textContent;
+        
+        if (this.classList.contains('saved')) {
+          this.classList.remove('saved');
+          this.innerHTML = '<i class="far fa-bookmark fa-lg"></i> Save';
+          alert(`${restaurantName} removed from your saved restaurants.`);
+          
+          // In a real app, you would make an AJAX call to update the database
+          // For demo purposes, we'll just hide the card with animation
+          const card = this.closest('.restaurant-card');
+          card.style.opacity = '0';
+          setTimeout(() => {
+            card.style.display = 'none';
+          }, 500);
+        } else {
+          this.classList.add('saved');
+          this.innerHTML = '<i class="fas fa-bookmark fa-lg"></i> Saved';
+          alert(`${restaurantName} added to your saved restaurants!`);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %} 
